@@ -395,6 +395,9 @@ function App() {
               break;
             case 'Progress':
               downloaded += event.data.chunkLength;
+              if (contentLength > 0) {
+                console.log(`Update download progress: ${Math.round((downloaded / contentLength) * 100)}%`);
+              }
               break;
             case 'Finished':
               break;
