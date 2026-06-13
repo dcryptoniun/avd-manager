@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { useTheme } from './hooks/useTheme';
 import { useToast } from './hooks/useToast';
@@ -27,7 +27,7 @@ import {
   Eraser,
   Square,
   FolderOpen,
-  Zap,
+  Terminal,
 } from 'lucide-react';
 import type {
   NavPage,
@@ -261,6 +261,16 @@ function App() {
   const [runningEmulators, setRunningEmulators] = useState<EmulatorInstance[]>(
     []
   );
+  const [emulatorLogs, setEmulatorLogs] = useState<Record<string, string[]>>({});
+  const [activeTerminalTab, setActiveTerminalTab] = useState<string>('');
+  const [isTerminalCollapsed, setIsTerminalCollapsed] = useState<boolean>(false);
+  const globalTerminalEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isTerminalCollapsed && globalTerminalEndRef.current) {
+      globalTerminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [emulatorLogs, isTerminalCollapsed, activeTerminalTab]);
 
   // SDK
   const [packages, setPackages] = useState<SdkPackage[]>([]);
@@ -450,7 +460,14 @@ function App() {
       return;
     }
     try {
-      await launchEmulator(env.sdk_path, avdName, launchOptions);
+      setEmulatorLogs((prev) => ({ ...prev, [avdName]: [] })); // Clear previous logs
+      setActiveTerminalTab(avdName); // Auto-focus global terminal tab
+      await launchEmulator(env.sdk_path, avdName, launchOptions, (line) => {
+        setEmulatorLogs((prev) => ({
+          ...prev,
+          [avdName]: [...(prev[avdName] || []), line].slice(-1000), // Keep last 1000 lines
+        }));
+      });
       success(`Emulator '${avdName}' launched`);
       setTimeout(loadRunningEmulators, 3000);
     } catch (e) {
@@ -674,12 +691,12 @@ function App() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <Zap size={16} />
+          <div className="sidebar-logo" style={{ padding: 0, background: 'transparent' }}>
+            <img src="/logo.png" alt="AVD Manager" style={{ width: 28, height: 28, borderRadius: 8 }} />
           </div>
           <div>
             <div className="sidebar-title">AVD Manager</div>
-            <div className="sidebar-subtitle">v0.1.0</div>
+            <div className="sidebar-subtitle">v1.0.1</div>
           </div>
         </div>
 
@@ -1338,6 +1355,51 @@ function App() {
           </>
         )}
       </main>
+
+      {/* ===== Global Terminal ===== */}
+      {Object.keys(emulatorLogs).length > 0 && (
+        <div className={`global-terminal ${isTerminalCollapsed ? 'collapsed' : ''}`}>
+          <div className="global-terminal-header">
+            <div className="global-terminal-tabs">
+              {Object.keys(emulatorLogs).map((avdName) => (
+                <button
+                  key={avdName}
+                  className={`terminal-tab ${activeTerminalTab === avdName ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTerminalTab(avdName);
+                    if (isTerminalCollapsed) setIsTerminalCollapsed(false);
+                  }}
+                >
+                  <Terminal size={14} style={{ marginRight: '6px' }} />
+                  {avdName}
+                </button>
+              ))}
+            </div>
+            <div className="global-terminal-actions">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setIsTerminalCollapsed(!isTerminalCollapsed)}
+                title="Toggle Terminal"
+              >
+                {isTerminalCollapsed ? <Play size={14} /> : <Square size={14} />}
+              </button>
+            </div>
+          </div>
+          
+          {!isTerminalCollapsed && (
+            <div className="global-terminal-content">
+              {activeTerminalTab && emulatorLogs[activeTerminalTab]?.length === 0 ? (
+                <span className="avd-terminal-placeholder">Waiting for logs...</span>
+              ) : (
+                activeTerminalTab && emulatorLogs[activeTerminalTab]?.map((line, i) => (
+                  <div key={i} className="avd-terminal-line">{line}</div>
+                ))
+              )}
+              <div ref={globalTerminalEndRef} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== Create AVD Dialog ===== */}
       <Modal

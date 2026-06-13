@@ -13,13 +13,17 @@ pub struct LaunchOptions {
     pub cold_boot: bool,
     pub wipe_data: bool,
     pub no_snapshot: bool,
-    pub gpu: String,       // "auto", "host", "guest", "swiftshader_indirect"
+    pub gpu: String, // "auto", "host", "guest", "swiftshader_indirect"
     pub no_audio: bool,
     pub no_boot_anim: bool,
 }
 
 fn get_emulator_cmd(sdk_path: &str) -> String {
-    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
+    let ext = if cfg!(target_os = "windows") {
+        ".exe"
+    } else {
+        ""
+    };
     let p = std::path::PathBuf::from(sdk_path)
         .join("emulator")
         .join(format!("emulator{}", ext));
@@ -30,7 +34,11 @@ fn get_emulator_cmd(sdk_path: &str) -> String {
 }
 
 fn get_adb_cmd(sdk_path: &str) -> String {
-    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
+    let ext = if cfg!(target_os = "windows") {
+        ".exe"
+    } else {
+        ""
+    };
     let p = std::path::PathBuf::from(sdk_path)
         .join("platform-tools")
         .join(format!("adb{}", ext));
@@ -40,11 +48,16 @@ fn get_adb_cmd(sdk_path: &str) -> String {
     format!("adb{}", ext)
 }
 
+use std::io::{BufRead, BufReader};
+use std::process::Stdio;
+use tauri::ipc::Channel;
+
 #[tauri::command]
 pub fn launch_emulator(
     sdk_path: String,
     avd_name: String,
     options: LaunchOptions,
+    on_event: Channel<String>,
 ) -> Result<String, String> {
     let cmd = get_emulator_cmd(&sdk_path);
 
@@ -70,24 +83,50 @@ pub fn launch_emulator(
         args.push("-no-boot-anim".to_string());
     }
 
-    // Launch emulator as a detached process
+    // Launch emulator and pipe output
     let mut command = Command::new(&cmd);
     command
         .args(&args)
         .env("ANDROID_HOME", &sdk_path)
-        .env("ANDROID_SDK_ROOT", &sdk_path);
+        .env("ANDROID_SDK_ROOT", &sdk_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     // Detach on all platforms
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
-        const DETACHED_PROCESS: u32 = 0x00000008;
-        command.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS);
+        // Don't use DETACHED_PROCESS here because we want to capture the pipes.
+        command.creation_flags(CREATE_NO_WINDOW);
     }
 
-    command.spawn()
+    let mut child = command
+        .spawn()
         .map_err(|e| format!("Failed to launch emulator: {}", e))?;
+
+    let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
+
+    let on_event_out = on_event.clone();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            if let Ok(l) = line {
+                let _ = on_event_out.send(l);
+            }
+        }
+    });
+
+    let on_event_err = on_event.clone();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(l) = line {
+                let _ = on_event_err.send(l);
+            }
+        }
+    });
 
     Ok(format!("Emulator '{}' launched", avd_name))
 }

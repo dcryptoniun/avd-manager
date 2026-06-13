@@ -20,7 +20,11 @@ pub struct SystemImage {
 }
 
 fn get_sdkmanager_cmd(sdk_path: &str) -> String {
-    let ext = if cfg!(target_os = "windows") { ".bat" } else { "" };
+    let ext = if cfg!(target_os = "windows") {
+        ".bat"
+    } else {
+        ""
+    };
     let p = std::path::PathBuf::from(sdk_path)
         .join("cmdline-tools")
         .join("latest")
@@ -56,13 +60,18 @@ pub fn list_sdk_packages(sdk_path: String) -> Result<Vec<SdkPackage>, String> {
     for line in stdout.lines() {
         let trimmed = line.trim();
 
-        if trimmed.starts_with("Installed packages:") || trimmed.starts_with("installed packages:") {
+        if trimmed.starts_with("Installed packages:") || trimmed.starts_with("installed packages:")
+        {
             section = "installed".to_string();
             continue;
-        } else if trimmed.starts_with("Available Packages:") || trimmed.starts_with("available packages:") {
+        } else if trimmed.starts_with("Available Packages:")
+            || trimmed.starts_with("available packages:")
+        {
             section = "available".to_string();
             continue;
-        } else if trimmed.starts_with("Available Updates:") || trimmed.starts_with("available updates:") {
+        } else if trimmed.starts_with("Available Updates:")
+            || trimmed.starts_with("available updates:")
+        {
             section = "update".to_string();
             continue;
         }

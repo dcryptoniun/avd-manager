@@ -22,7 +22,11 @@ pub struct DeviceDefinition {
 }
 
 fn get_avdmanager_cmd(sdk_path: &str) -> String {
-    let ext = if cfg!(target_os = "windows") { ".bat" } else { "" };
+    let ext = if cfg!(target_os = "windows") {
+        ".bat"
+    } else {
+        ""
+    };
     let p = std::path::PathBuf::from(sdk_path)
         .join("cmdline-tools")
         .join("latest")
@@ -177,19 +181,39 @@ pub fn create_avd(
     // Auto-decline custom hardware profile
     let output = if cfg!(target_os = "windows") {
         Command::new("cmd")
-            .args(["/C", &format!("echo no | \"{}\" create avd -n \"{}\" -k \"{}\" {} ",
-                cmd, name, package,
-                if device.is_empty() { String::new() } else { format!("-d \"{}\"", device) }
-            )])
+            .args([
+                "/C",
+                &format!(
+                    "echo no | \"{}\" create avd -n \"{}\" -k \"{}\" {} ",
+                    cmd,
+                    name,
+                    package,
+                    if device.is_empty() {
+                        String::new()
+                    } else {
+                        format!("-d \"{}\"", device)
+                    }
+                ),
+            ])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()
     } else {
         Command::new("sh")
-            .args(["-c", &format!("echo no | '{}' create avd -n '{}' -k '{}' {} ",
-                cmd, name, package,
-                if device.is_empty() { String::new() } else { format!("-d '{}'", device) }
-            )])
+            .args([
+                "-c",
+                &format!(
+                    "echo no | '{}' create avd -n '{}' -k '{}' {} ",
+                    cmd,
+                    name,
+                    package,
+                    if device.is_empty() {
+                        String::new()
+                    } else {
+                        format!("-d '{}'", device)
+                    }
+                ),
+            ])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()

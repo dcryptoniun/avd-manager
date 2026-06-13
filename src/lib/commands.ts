@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, Channel } from '@tauri-apps/api/core';
 import type {
   EnvironmentStatus,
   AvdInfo,
@@ -120,9 +120,22 @@ export async function acceptLicenses(sdkPath: string): Promise<string> {
 export async function launchEmulator(
   sdkPath: string,
   avdName: string,
-  options: LaunchOptions
+  options: LaunchOptions,
+  onLog?: (line: string) => void
 ): Promise<string> {
-  return invoke<string>('launch_emulator', { sdkPath, avdName, options });
+  const onEvent = new Channel<string>();
+  onEvent.onmessage = (message: string) => {
+    if (onLog) {
+      onLog(message);
+    }
+  };
+
+  return invoke<string>('launch_emulator', {
+    sdkPath,
+    avdName,
+    options,
+    onEvent,
+  });
 }
 
 export async function listRunningEmulators(

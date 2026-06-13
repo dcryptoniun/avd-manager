@@ -169,3 +169,105 @@ body {
   --color-scrollbar: rgba(255, 255, 255, 0.1);
   --color-scrollbar-hover: rgba(255, 255, 255, 0.2);
 }
+
+/* ==========================================
+   Global Terminal UI
+   ========================================== */
+.global-terminal {
+  position: absolute;
+  bottom: 0;
+  left: 240px;
+  right: 0;
+  background: #0d1117;
+  color: #c9d1d9;
+  border-top: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+  z-index: 100;
+  transition: height 0.3s ease;
+}
+
+.global-terminal.collapsed {
+  height: 40px;
+}
+
+.global-terminal-header {
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 0 12px;
+}
+
+.global-terminal-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  color: #8b949e;
+  border: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  height: 32px;
+  transition: all 0.2s;
+}
+
+.terminal-tab:hover {
+  background: #21262d;
+  color: #c9d1d9;
+}
+
+.terminal-tab.active {
+  background: #0d1117;
+  color: var(--color-primary);
+  border-top: 2px solid var(--color-primary);
+  border-left: 1px solid #30363d;
+  border-right: 1px solid #30363d;
+}
+
+.global-terminal-actions {
+  display: flex;
+  align-items: center;
+}
+
+.global-terminal-actions .btn-ghost {
+  color: #8b949e;
+}
+.global-terminal-actions .btn-ghost:hover {
+  background: #30363d;
+  color: #c9d1d9;
+}
+
+.global-terminal-content {
+  flex: 1;
+  padding: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.avd-terminal-line {
+  margin: 0;
+  padding: 0;
+}
+
+.avd-terminal-placeholder {
+  color: #8b949e;
+  font-style: italic;
+}

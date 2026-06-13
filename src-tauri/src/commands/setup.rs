@@ -35,7 +35,10 @@ fn find_sdk_path() -> Option<String> {
     if let Some(home) = home_dir {
         let common_paths: Vec<PathBuf> = if cfg!(target_os = "windows") {
             vec![
-                home.join("AppData").join("Local").join("Android").join("Sdk"),
+                home.join("AppData")
+                    .join("Local")
+                    .join("Android")
+                    .join("Sdk"),
                 PathBuf::from("C:\\Android\\sdk"),
                 PathBuf::from("C:\\android\\sdk"),
                 home.join("Android").join("Sdk"),
@@ -73,12 +76,21 @@ fn dirs_fallback() -> Option<PathBuf> {
 
 fn find_tool_in_sdk(sdk_path: &str, tool_name: &str) -> Option<String> {
     let sdk = PathBuf::from(sdk_path);
-    let ext = if cfg!(target_os = "windows") { ".bat" } else { "" };
+    let ext = if cfg!(target_os = "windows") {
+        ".bat"
+    } else {
+        ""
+    };
 
     // Check cmdline-tools paths (latest first)
     let cmdline_paths = vec![
-        sdk.join("cmdline-tools").join("latest").join("bin").join(format!("{}{}", tool_name, ext)),
-        sdk.join("cmdline-tools").join("bin").join(format!("{}{}", tool_name, ext)),
+        sdk.join("cmdline-tools")
+            .join("latest")
+            .join("bin")
+            .join(format!("{}{}", tool_name, ext)),
+        sdk.join("cmdline-tools")
+            .join("bin")
+            .join(format!("{}{}", tool_name, ext)),
     ];
 
     for path in cmdline_paths {
@@ -88,15 +100,24 @@ fn find_tool_in_sdk(sdk_path: &str, tool_name: &str) -> Option<String> {
     }
 
     // Check tools directory (legacy)
-    let legacy = sdk.join("tools").join("bin").join(format!("{}{}", tool_name, ext));
+    let legacy = sdk
+        .join("tools")
+        .join("bin")
+        .join(format!("{}{}", tool_name, ext));
     if legacy.exists() {
         return Some(legacy.to_string_lossy().to_string());
     }
 
     // For emulator, check emulator directory
     if tool_name == "emulator" {
-        let emu_ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
-        let emu_path = sdk.join("emulator").join(format!("{}{}", tool_name, emu_ext));
+        let emu_ext = if cfg!(target_os = "windows") {
+            ".exe"
+        } else {
+            ""
+        };
+        let emu_path = sdk
+            .join("emulator")
+            .join(format!("{}{}", tool_name, emu_ext));
         if emu_path.exists() {
             return Some(emu_path.to_string_lossy().to_string());
         }
@@ -104,8 +125,14 @@ fn find_tool_in_sdk(sdk_path: &str, tool_name: &str) -> Option<String> {
 
     // For adb, check platform-tools
     if tool_name == "adb" {
-        let adb_ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
-        let adb_path = sdk.join("platform-tools").join(format!("{}{}", tool_name, adb_ext));
+        let adb_ext = if cfg!(target_os = "windows") {
+            ".exe"
+        } else {
+            ""
+        };
+        let adb_path = sdk
+            .join("platform-tools")
+            .join(format!("{}{}", tool_name, adb_ext));
         if adb_path.exists() {
             return Some(adb_path.to_string_lossy().to_string());
         }
@@ -124,10 +151,12 @@ fn detect_java() -> (Option<String>, Option<String>) {
         .and_then(|output| {
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
             let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let text = if stderr.contains("version") { stderr } else { stdout };
-            text.lines()
-                .next()
-                .map(|line| line.trim().to_string())
+            let text = if stderr.contains("version") {
+                stderr
+            } else {
+                stdout
+            };
+            text.lines().next().map(|line| line.trim().to_string())
         });
 
     (java_home, java_version)
