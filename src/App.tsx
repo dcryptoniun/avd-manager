@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { useTheme } from './hooks/useTheme';
 import { useToast } from './hooks/useToast';
+import { check } from '@tauri-apps/plugin-updater';
 import {
   Smartphone,
   Package,
@@ -254,6 +255,7 @@ function App() {
   const [env, setEnv] = useState<EnvironmentStatus | null>(null);
   const [envLoading, setEnvLoading] = useState<boolean>(true);
   const [customSdkPath, setCustomSdkPath] = useState<string>('');
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
 
   // AVDs
   const [avds, setAvds] = useState<AvdInfo[]>([]);
@@ -349,13 +351,13 @@ function App() {
   }, [env?.sdk_path]);
 
   useEffect(() => {
-    if (env?.is_sdk_valid && currentPage === 'devices') {
+    if (env?.is_sdk_valid) {
       loadAvds();
       loadRunningEmulators();
       const interval = setInterval(loadRunningEmulators, 5000);
       return () => clearInterval(interval);
     }
-  }, [env?.is_sdk_valid, currentPage, loadAvds, loadRunningEmulators]);
+  }, [env?.is_sdk_valid, loadAvds, loadRunningEmulators]);
 
   // ========== SDK Packages ==========
   const loadPackages = useCallback(async () => {
@@ -372,15 +374,43 @@ function App() {
   }, [env?.sdk_path, error]);
 
   useEffect(() => {
-    if (
-      env?.is_sdk_valid &&
-      (currentPage === 'platforms' || currentPage === 'tools')
-    ) {
+    if (env?.is_sdk_valid) {
       loadPackages();
     }
-  }, [env?.is_sdk_valid, currentPage, loadPackages]);
+  }, [env?.is_sdk_valid, loadPackages]);
 
   // ========== Handlers ==========
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const update = await check();
+      if (update) {
+        info(`Found update ${update.version}. Downloading...`);
+        let downloaded = 0;
+        let contentLength = 0;
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case 'Started':
+              contentLength = event.data.contentLength || 0;
+              break;
+            case 'Progress':
+              downloaded += event.data.chunkLength;
+              break;
+            case 'Finished':
+              break;
+          }
+        });
+        success('Update installed! Please restart the application.');
+      } else {
+        success('You are on the latest version.');
+      }
+    } catch (e) {
+      error(`Failed to check for updates: ${e}`);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
   const handleSetSdkPath = async () => {
     try {
       await setSdkPath(customSdkPath);
@@ -1348,6 +1378,19 @@ function App() {
                       <span className="settings-row-label">License</span>
                     </div>
                     <span className="settings-row-value">MIT</span>
+                  </div>
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">Updates</span>
+                      <span className="settings-row-desc">Check for the latest version</span>
+                    </div>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleCheckUpdate}
+                      disabled={isCheckingUpdate}
+                    >
+                      {isCheckingUpdate ? 'Checking...' : 'Check for Updates'}
+                    </button>
                   </div>
                 </div>
               </div>

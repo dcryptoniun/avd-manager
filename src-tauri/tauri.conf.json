@@ -36,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/dcryptoniun/avd-manager/releases/download/v{{current_version}}/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE0QkYzQTMwNTlDMjA0MTQKUldRVUJNSlpNRHEvcEhma0x2cS9KZVlEZHNWZlhLOGd0T0RVUU9sYU0wN0taZGlQSWp0VHRwRUwK"
+    }
   }
 }

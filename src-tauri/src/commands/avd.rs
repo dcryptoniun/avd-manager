@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use crate::commands::utils::create_command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AvdInfo {
@@ -136,7 +136,7 @@ fn extract_api_level(target: &str) -> String {
 pub fn list_avds(sdk_path: String) -> Result<Vec<AvdInfo>, String> {
     let cmd = get_avdmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("list")
         .arg("avd")
         .env("ANDROID_HOME", &sdk_path)
@@ -163,7 +163,7 @@ pub fn create_avd(
 ) -> Result<String, String> {
     let cmd = get_avdmanager_cmd(&sdk_path);
 
-    let mut command = Command::new(&cmd);
+    let mut command = create_command(&cmd);
     command
         .arg("create")
         .arg("avd")
@@ -180,7 +180,7 @@ pub fn create_avd(
 
     // Auto-decline custom hardware profile
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
+        create_command("cmd")
             .args([
                 "/C",
                 &format!(
@@ -199,7 +199,7 @@ pub fn create_avd(
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()
     } else {
-        Command::new("sh")
+        create_command("sh")
             .args([
                 "-c",
                 &format!(
@@ -235,7 +235,7 @@ pub fn create_avd(
 pub fn delete_avd(sdk_path: String, name: String) -> Result<String, String> {
     let cmd = get_avdmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("delete")
         .arg("avd")
         .arg("-n")
@@ -257,7 +257,7 @@ pub fn delete_avd(sdk_path: String, name: String) -> Result<String, String> {
 pub fn rename_avd(sdk_path: String, old_name: String, new_name: String) -> Result<String, String> {
     let cmd = get_avdmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("move")
         .arg("avd")
         .arg("-n")
@@ -348,7 +348,7 @@ pub fn get_avd_details(name: String) -> Result<std::collections::HashMap<String,
 pub fn list_device_definitions(sdk_path: String) -> Result<Vec<DeviceDefinition>, String> {
     let cmd = get_avdmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("list")
         .arg("device")
         .env("ANDROID_HOME", &sdk_path)

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use crate::commands::utils::create_command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SdkPackage {
@@ -40,7 +40,7 @@ fn get_sdkmanager_cmd(sdk_path: &str) -> String {
 pub fn list_sdk_packages(sdk_path: String) -> Result<Vec<SdkPackage>, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("--list")
         .env("ANDROID_HOME", &sdk_path)
         .env("ANDROID_SDK_ROOT", &sdk_path)
@@ -161,13 +161,13 @@ pub fn install_package(sdk_path: String, package: String) -> Result<String, Stri
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
+        create_command("cmd")
             .args(["/C", &format!("echo y | \"{}\" \"{}\"", cmd, package)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()
     } else {
-        Command::new("sh")
+        create_command("sh")
             .args(["-c", &format!("echo y | '{}' '{}'", cmd, package)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
@@ -190,7 +190,7 @@ pub fn install_package(sdk_path: String, package: String) -> Result<String, Stri
 pub fn uninstall_package(sdk_path: String, package: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
-    let output = Command::new(&cmd)
+    let output = create_command(&cmd)
         .arg("--uninstall")
         .arg(&package)
         .env("ANDROID_HOME", &sdk_path)
@@ -211,13 +211,13 @@ pub fn update_all_packages(sdk_path: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
+        create_command("cmd")
             .args(["/C", &format!("echo y | \"{}\" --update", cmd)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()
     } else {
-        Command::new("sh")
+        create_command("sh")
             .args(["-c", &format!("echo y | '{}' --update", cmd)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
@@ -239,13 +239,13 @@ pub fn accept_licenses(sdk_path: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
+        create_command("cmd")
             .args(["/C", &format!("echo y | \"{}\" --licenses", cmd)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)
             .output()
     } else {
-        Command::new("sh")
+        create_command("sh")
             .args(["-c", &format!("yes | '{}' --licenses", cmd)])
             .env("ANDROID_HOME", &sdk_path)
             .env("ANDROID_SDK_ROOT", &sdk_path)

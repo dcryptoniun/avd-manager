@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use crate::commands::utils::create_command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmulatorInstance {
@@ -84,22 +84,13 @@ pub fn launch_emulator(
     }
 
     // Launch emulator and pipe output
-    let mut command = Command::new(&cmd);
+    let mut command = create_command(&cmd);
     command
         .args(&args)
         .env("ANDROID_HOME", &sdk_path)
         .env("ANDROID_SDK_ROOT", &sdk_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-
-    // Detach on all platforms
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        // Don't use DETACHED_PROCESS here because we want to capture the pipes.
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
 
     let mut child = command
         .spawn()
@@ -135,7 +126,7 @@ pub fn launch_emulator(
 pub fn list_running_emulators(sdk_path: String) -> Result<Vec<EmulatorInstance>, String> {
     let adb = get_adb_cmd(&sdk_path);
 
-    let output = Command::new(&adb)
+    let output = create_command(&adb)
         .arg("devices")
         .output()
         .map_err(|e| format!("Failed to run adb: {}", e))?;
@@ -167,7 +158,7 @@ pub fn list_running_emulators(sdk_path: String) -> Result<Vec<EmulatorInstance>,
 }
 
 fn get_emulator_name(adb_cmd: &str, serial: &str) -> Option<String> {
-    let output = Command::new(adb_cmd)
+    let output = create_command(adb_cmd)
         .args(["-s", serial, "emu", "avd", "name"])
         .output()
         .ok()?;
@@ -180,7 +171,7 @@ fn get_emulator_name(adb_cmd: &str, serial: &str) -> Option<String> {
 pub fn stop_emulator(sdk_path: String, serial: String) -> Result<String, String> {
     let adb = get_adb_cmd(&sdk_path);
 
-    let output = Command::new(&adb)
+    let output = create_command(&adb)
         .args(["-s", &serial, "emu", "kill"])
         .output()
         .map_err(|e| format!("Failed to stop emulator: {}", e))?;

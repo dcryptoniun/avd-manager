@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
-use std::process::Command;
+use crate::commands::utils::create_command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EnvironmentStatus {
@@ -144,7 +144,7 @@ fn find_tool_in_sdk(sdk_path: &str, tool_name: &str) -> Option<String> {
 fn detect_java() -> (Option<String>, Option<String>) {
     let java_home = env::var("JAVA_HOME").ok();
 
-    let java_version = Command::new("java")
+    let java_version = create_command("java")
         .arg("-version")
         .output()
         .ok()
