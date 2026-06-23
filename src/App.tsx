@@ -3,6 +3,8 @@ import './App.css';
 import { useTheme } from './hooks/useTheme';
 import { useToast } from './hooks/useToast';
 import { check } from '@tauri-apps/plugin-updater';
+import { getVersion } from '@tauri-apps/api/app';
+import { open } from '@tauri-apps/plugin-opener';
 import {
   Smartphone,
   Package,
@@ -19,6 +21,7 @@ import {
   XCircle,
   AlertCircle,
   Info,
+  Github,
   Sun,
   Moon,
   Monitor,
@@ -256,6 +259,11 @@ function App() {
   const [envLoading, setEnvLoading] = useState<boolean>(true);
   const [customSdkPath, setCustomSdkPath] = useState<string>('');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(console.error);
+  }, []);
 
   // AVDs
   const [avds, setAvds] = useState<AvdInfo[]>([]);
@@ -1374,7 +1382,19 @@ function App() {
                         Open-source Android Virtual Device Manager
                       </span>
                     </div>
-                    <span className="settings-row-value">v0.1.0</span>
+                    <span className="settings-row-value">v{appVersion || '...'}</span>
+                  </div>
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">Repository</span>
+                      <span className="settings-row-desc">View source code on GitHub</span>
+                    </div>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => open('https://github.com/dcryptoniun/avd-manager')}
+                    >
+                      <Github size={14} style={{ marginRight: '6px' }} /> GitHub
+                    </button>
                   </div>
                   <div className="settings-row">
                     <div className="settings-row-info">
