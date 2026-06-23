@@ -4,7 +4,7 @@ import { useTheme } from './hooks/useTheme';
 import { useToast } from './hooks/useToast';
 import { check } from '@tauri-apps/plugin-updater';
 import { getVersion } from '@tauri-apps/api/app';
-import { open } from '@tauri-apps/plugin-opener';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import {
   Smartphone,
   Package,
@@ -21,7 +21,7 @@ import {
   XCircle,
   AlertCircle,
   Info,
-  Github,
+  ExternalLink,
   Sun,
   Moon,
   Monitor,
@@ -1391,9 +1391,9 @@ function App() {
                     </div>
                     <button 
                       className="btn btn-secondary btn-sm"
-                      onClick={() => open('https://github.com/dcryptoniun/avd-manager')}
+                      onClick={() => openUrl('https://github.com/dcryptoniun/avd-manager')}
                     >
-                      <Github size={14} style={{ marginRight: '6px' }} /> GitHub
+                      <ExternalLink size={14} style={{ marginRight: '6px' }} /> GitHub
                     </button>
                   </div>
                   <div className="settings-row">
