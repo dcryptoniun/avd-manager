@@ -737,7 +737,7 @@ function App() {
           </div>
           <div>
             <div className="sidebar-title">AVD Manager</div>
-            <div className="sidebar-subtitle">v1.0.1</div>
+            <div className="sidebar-subtitle">v{appVersion || '...'}</div>
           </div>
         </div>
 
