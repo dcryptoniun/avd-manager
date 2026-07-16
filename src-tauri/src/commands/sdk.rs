@@ -160,19 +160,22 @@ pub fn list_system_images(sdk_path: String) -> Result<Vec<SystemImage>, String> 
 pub fn install_package(sdk_path: String, package: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
-    let output = if cfg!(target_os = "windows") {
-        create_command("cmd")
-            .args(["/C", &format!("echo y | \"{}\" \"{}\"", cmd, package)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    } else {
-        create_command("sh")
-            .args(["-c", &format!("echo y | '{}' '{}'", cmd, package)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    };
+    let mut command = create_command(&cmd);
+    command.arg(&package)
+        .env("ANDROID_HOME", &sdk_path)
+        .env("ANDROID_SDK_ROOT", &sdk_path)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let mut child = command.spawn().map_err(|e| format!("Failed to spawn sdkmanager: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(b"y\n");
+    }
+
+    let output = child.wait_with_output();
 
     let output = output.map_err(|e| format!("Failed to install package: {}", e))?;
 
@@ -210,19 +213,22 @@ pub fn uninstall_package(sdk_path: String, package: String) -> Result<String, St
 pub fn update_all_packages(sdk_path: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
-    let output = if cfg!(target_os = "windows") {
-        create_command("cmd")
-            .args(["/C", &format!("echo y | \"{}\" --update", cmd)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    } else {
-        create_command("sh")
-            .args(["-c", &format!("echo y | '{}' --update", cmd)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    };
+    let mut command = create_command(&cmd);
+    command.arg("--update")
+        .env("ANDROID_HOME", &sdk_path)
+        .env("ANDROID_SDK_ROOT", &sdk_path)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let mut child = command.spawn().map_err(|e| format!("Failed to spawn sdkmanager: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(b"y\n");
+    }
+
+    let output = child.wait_with_output();
 
     let output = output.map_err(|e| format!("Failed to update packages: {}", e))?;
 
@@ -238,19 +244,23 @@ pub fn update_all_packages(sdk_path: String) -> Result<String, String> {
 pub fn accept_licenses(sdk_path: String) -> Result<String, String> {
     let cmd = get_sdkmanager_cmd(&sdk_path);
 
-    let output = if cfg!(target_os = "windows") {
-        create_command("cmd")
-            .args(["/C", &format!("echo y | \"{}\" --licenses", cmd)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    } else {
-        create_command("sh")
-            .args(["-c", &format!("yes | '{}' --licenses", cmd)])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    };
+    let mut command = create_command(&cmd);
+    command.arg("--licenses")
+        .env("ANDROID_HOME", &sdk_path)
+        .env("ANDROID_SDK_ROOT", &sdk_path)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let mut child = command.spawn().map_err(|e| format!("Failed to spawn sdkmanager: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let ys = "y\n".repeat(50);
+        let _ = stdin.write_all(ys.as_bytes());
+    }
+
+    let output = child.wait_with_output();
 
     let output = output.map_err(|e| format!("Failed to accept licenses: {}", e))?;
 

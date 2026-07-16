@@ -178,48 +178,18 @@ pub fn create_avd(
         command.arg("-d").arg(&device);
     }
 
-    // Auto-decline custom hardware profile
-    let output = if cfg!(target_os = "windows") {
-        create_command("cmd")
-            .args([
-                "/C",
-                &format!(
-                    "echo no | \"{}\" create avd -n \"{}\" -k \"{}\" {} ",
-                    cmd,
-                    name,
-                    package,
-                    if device.is_empty() {
-                        String::new()
-                    } else {
-                        format!("-d \"{}\"", device)
-                    }
-                ),
-            ])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    } else {
-        create_command("sh")
-            .args([
-                "-c",
-                &format!(
-                    "echo no | '{}' create avd -n '{}' -k '{}' {} ",
-                    cmd,
-                    name,
-                    package,
-                    if device.is_empty() {
-                        String::new()
-                    } else {
-                        format!("-d '{}'", device)
-                    }
-                ),
-            ])
-            .env("ANDROID_HOME", &sdk_path)
-            .env("ANDROID_SDK_ROOT", &sdk_path)
-            .output()
-    };
+    command.stdin(std::process::Stdio::piped());
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
 
-    let output = output.map_err(|e| format!("Failed to create AVD: {}", e))?;
+    let mut child = command.spawn().map_err(|e| format!("Failed to spawn avdmanager: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(b"no\n");
+    }
+
+    let output = child.wait_with_output().map_err(|e| format!("Failed to wait on avdmanager: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
