@@ -21,6 +21,7 @@ pub fn run() {
             avd::rename_avd,
             avd::wipe_avd_data,
             avd::get_avd_details,
+            avd::update_avd_config,
             avd::list_device_definitions,
             // SDK commands
             sdk::list_sdk_packages,

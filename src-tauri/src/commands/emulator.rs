@@ -62,17 +62,7 @@ pub fn launch_emulator(
     let cmd = get_emulator_cmd(&sdk_path);
 
     // Delete emulator-user.ini to force the emulator window to open in the center of the screen
-    let home = if cfg!(target_os = "windows") {
-        std::env::var("USERPROFILE").unwrap_or_default()
-    } else {
-        std::env::var("HOME").unwrap_or_default()
-    };
-    
-    let ini_path = std::path::PathBuf::from(&home)
-        .join(".android")
-        .join("avd")
-        .join(format!("{}.avd", avd_name))
-        .join("emulator-user.ini");
+    let ini_path = crate::commands::avd::get_avd_path(&avd_name).join("emulator-user.ini");
         
     if ini_path.exists() {
         let _ = std::fs::remove_file(&ini_path);

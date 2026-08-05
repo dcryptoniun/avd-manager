@@ -62,6 +62,8 @@ import {
   launchEmulator,
   listRunningEmulators,
   stopEmulator,
+  getAvdDetails,
+  updateAvdConfig,
 } from './lib/commands';
 
 // ==========================================
@@ -140,6 +142,7 @@ function AvdCard({
   onDelete,
   onRename,
   onWipe,
+  onSettings,
 }: {
   avd: AvdInfo;
   running: boolean;
@@ -147,6 +150,7 @@ function AvdCard({
   onDelete: () => void;
   onRename: () => void;
   onWipe: () => void;
+  onSettings: () => void;
 }) {
   return (
     <div className="card avd-card">
@@ -163,6 +167,13 @@ function AvdCard({
           </div>
         </div>
         <div className="avd-card-actions">
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={onSettings}
+            title="Settings"
+          >
+            <Settings size={14} />
+          </button>
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={onRename}
@@ -303,6 +314,10 @@ function App() {
 
   // Rename form
   const [renameValue, setRenameValue] = useState<string>('');
+
+  // Settings form
+  const [showSettingsDialog, setShowSettingsDialog] = useState<boolean>(false);
+  const [settingsValues, setSettingsValues] = useState<Record<string, string>>({});
 
   // Launch options
   const [launchOptions, setLaunchOptions] = useState<LaunchOptions>({
@@ -479,6 +494,35 @@ function App() {
       success(`Data wiped for '${name}'`);
     } catch (e) {
       error(`Failed to wipe data: ${e}`);
+    }
+  };
+
+  const handleOpenSettings = async (avd: AvdInfo) => {
+    setSelectedAvd(avd);
+    try {
+      const details = await getAvdDetails(avd.name);
+      setSettingsValues({
+        'hw.ramSize': details['hw.ramSize'] || '1536',
+        'disk.dataPartition.size': details['disk.dataPartition.size'] || '800M',
+        'sdcard.size': details['sdcard.size'] || '512M',
+        'hw.camera.front': details['hw.camera.front'] || 'emulated',
+        'hw.camera.back': details['hw.camera.back'] || 'virtualscene',
+      });
+      setShowSettingsDialog(true);
+    } catch (e) {
+      error(`Failed to get AVD settings: ${e}`);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    if (!selectedAvd) return;
+    try {
+      await updateAvdConfig(selectedAvd.name, settingsValues);
+      success(`Settings saved for '${selectedAvd.name}'`);
+      setShowSettingsDialog(false);
+      setSelectedAvd(null);
+    } catch (e) {
+      error(`Failed to save settings: ${e}`);
     }
   };
 
@@ -861,6 +905,7 @@ function App() {
                         setShowRenameDialog(true);
                       }}
                       onWipe={() => handleWipeData(avd.name)}
+                      onSettings={() => handleOpenSettings(avd)}
                     />
                   ))}
                 </div>
@@ -1570,6 +1615,90 @@ function App() {
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
           />
+        </div>
+      </Modal>
+
+      {/* ===== Settings Dialog ===== */}
+      <Modal
+        open={showSettingsDialog}
+        title={`Settings: ${selectedAvd?.name}`}
+        onClose={() => setShowSettingsDialog(false)}
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowSettingsDialog(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveSettings}
+            >
+              <CheckCircle2 size={14} /> Save
+            </button>
+          </>
+        }
+      >
+        <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-secondary)', borderRadius: '6px', fontSize: '13px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+          <AlertCircle size={16} style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: '2px' }} />
+          <span>If this emulator is currently running, you must completely stop it and start it again (Cold Boot) for hardware changes to apply.</span>
+        </div>
+
+        <div className="input-group">
+          <label className="input-label">RAM Size (MB)</label>
+          <input
+            className="input"
+            type="text"
+            value={settingsValues['hw.ramSize'] || ''}
+            onChange={(e) => setSettingsValues({...settingsValues, 'hw.ramSize': e.target.value})}
+            placeholder="e.g. 1536"
+          />
+        </div>
+        <div className="input-group">
+          <label className="input-label">Internal Storage</label>
+          <input
+            className="input"
+            type="text"
+            value={settingsValues['disk.dataPartition.size'] || ''}
+            onChange={(e) => setSettingsValues({...settingsValues, 'disk.dataPartition.size': e.target.value})}
+            placeholder="e.g. 800M or 2G"
+          />
+        </div>
+        <div className="input-group">
+          <label className="input-label">SD Card Size</label>
+          <input
+            className="input"
+            type="text"
+            value={settingsValues['sdcard.size'] || ''}
+            onChange={(e) => setSettingsValues({...settingsValues, 'sdcard.size': e.target.value})}
+            placeholder="e.g. 512M"
+          />
+        </div>
+        <div className="input-group">
+          <label className="input-label">Front Camera</label>
+          <select
+            className="input"
+            value={settingsValues['hw.camera.front'] || ''}
+            onChange={(e) => setSettingsValues({...settingsValues, 'hw.camera.front': e.target.value})}
+          >
+            <option value="none">None</option>
+            <option value="emulated">Emulated</option>
+            <option value="webcam0">Webcam0</option>
+          </select>
+        </div>
+        <div className="input-group">
+          <label className="input-label">Back Camera</label>
+          <select
+            className="input"
+            value={settingsValues['hw.camera.back'] || ''}
+            onChange={(e) => setSettingsValues({...settingsValues, 'hw.camera.back': e.target.value})}
+          >
+            <option value="none">None</option>
+            <option value="virtualscene">Virtual Scene</option>
+            <option value="emulated">Emulated</option>
+            <option value="webcam0">Webcam0</option>
+          </select>
         </div>
       </Modal>
 

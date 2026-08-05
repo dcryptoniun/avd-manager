@@ -247,19 +247,38 @@ pub fn rename_avd(sdk_path: String, old_name: String, new_name: String) -> Resul
     Ok(format!("AVD renamed from '{}' to '{}'", old_name, new_name))
 }
 
-#[tauri::command]
-pub fn wipe_avd_data(_sdk_path: String, name: String) -> Result<String, String> {
-    // Wipe data by finding the AVD directory and removing userdata files
+pub fn get_avd_path(name: &str) -> std::path::PathBuf {
     let home = if cfg!(target_os = "windows") {
         std::env::var("USERPROFILE").unwrap_or_default()
     } else {
         std::env::var("HOME").unwrap_or_default()
     };
 
-    let avd_dir = std::path::PathBuf::from(&home)
+    let ini_path = std::path::PathBuf::from(&home)
         .join(".android")
         .join("avd")
-        .join(format!("{}.avd", name));
+        .join(format!("{}.ini", name));
+
+    if let Ok(content) = std::fs::read_to_string(&ini_path) {
+        for line in content.lines() {
+            if let Some((key, value)) = line.split_once('=') {
+                if key.trim() == "path" {
+                    return std::path::PathBuf::from(value.trim());
+                }
+            }
+        }
+    }
+    
+    // Fallback if .ini is not found or doesn't have path
+    std::path::PathBuf::from(&home)
+        .join(".android")
+        .join("avd")
+        .join(format!("{}.avd", name))
+}
+
+#[tauri::command]
+pub fn wipe_avd_data(_sdk_path: String, name: String) -> Result<String, String> {
+    let avd_dir = get_avd_path(&name);
 
     if !avd_dir.exists() {
         return Err(format!("AVD directory not found: {:?}", avd_dir));
@@ -285,17 +304,7 @@ pub fn wipe_avd_data(_sdk_path: String, name: String) -> Result<String, String> 
 
 #[tauri::command]
 pub fn get_avd_details(name: String) -> Result<std::collections::HashMap<String, String>, String> {
-    let home = if cfg!(target_os = "windows") {
-        std::env::var("USERPROFILE").unwrap_or_default()
-    } else {
-        std::env::var("HOME").unwrap_or_default()
-    };
-
-    let config_path = std::path::PathBuf::from(&home)
-        .join(".android")
-        .join("avd")
-        .join(format!("{}.avd", name))
-        .join("config.ini");
+    let config_path = get_avd_path(&name).join("config.ini");
 
     if !config_path.exists() {
         return Err(format!("Config file not found for AVD '{}'", name));
@@ -312,6 +321,47 @@ pub fn get_avd_details(name: String) -> Result<std::collections::HashMap<String,
     }
 
     Ok(details)
+}
+
+#[tauri::command]
+pub fn update_avd_config(name: String, updates: std::collections::HashMap<String, String>) -> Result<String, String> {
+    let config_path = get_avd_path(&name).join("config.ini");
+
+    if !config_path.exists() {
+        return Err(format!("Config file not found for AVD '{}'", name));
+    }
+
+    let content = std::fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read config: {}", e))?;
+
+    let mut new_lines = Vec::new();
+    let mut updated_keys = std::collections::HashSet::new();
+
+    for line in content.lines() {
+        if let Some((key, _)) = line.split_once('=') {
+            let key = key.trim();
+            if let Some(new_val) = updates.get(key) {
+                new_lines.push(format!("{}={}", key, new_val));
+                updated_keys.insert(key.to_string());
+            } else {
+                new_lines.push(line.to_string());
+            }
+        } else {
+            new_lines.push(line.to_string());
+        }
+    }
+
+    // Append any keys that were in updates but not in the original file
+    for (key, value) in &updates {
+        if !updated_keys.contains(key) {
+            new_lines.push(format!("{}={}", key, value));
+        }
+    }
+
+    std::fs::write(&config_path, new_lines.join("\n"))
+        .map_err(|e| format!("Failed to write config: {}", e))?;
+
+    Ok(format!("Settings updated for '{}'", name))
 }
 
 #[tauri::command]

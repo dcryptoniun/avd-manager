@@ -73,6 +73,13 @@ export async function getAvdDetails(
   return invoke<Record<string, string>>('get_avd_details', { name });
 }
 
+export async function updateAvdConfig(
+  name: string,
+  updates: Record<string, string>
+): Promise<string> {
+  return invoke<string>('update_avd_config', { name, updates });
+}
+
 export async function listDeviceDefinitions(
   sdkPath: string
 ): Promise<DeviceDefinition[]> {
