@@ -32,6 +32,7 @@ import {
   Square,
   FolderOpen,
   Terminal,
+  Snowflake,
 } from 'lucide-react';
 import type {
   NavPage,
@@ -139,6 +140,7 @@ function AvdCard({
   avd,
   running,
   onLaunch,
+  onColdBoot,
   onDelete,
   onRename,
   onWipe,
@@ -147,6 +149,7 @@ function AvdCard({
   avd: AvdInfo;
   running: boolean;
   onLaunch: () => void;
+  onColdBoot: () => void;
   onDelete: () => void;
   onRename: () => void;
   onWipe: () => void;
@@ -242,13 +245,23 @@ function AvdCard({
             <Square size={14} /> Stop
           </button>
         ) : (
-          <button
-            className="btn btn-primary btn-sm"
-            style={{ flex: 1 }}
-            onClick={onLaunch}
-          >
-            <Play size={14} /> Launch
-          </button>
+          <>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ flex: 1 }}
+              onClick={onLaunch}
+            >
+              <Play size={14} /> Launch
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1 }}
+              onClick={onColdBoot}
+              title="Start emulator with cold boot (skips saved snapshot)"
+            >
+              <Snowflake size={14} /> Cold Boot
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -514,19 +527,24 @@ function App() {
     }
   };
 
-  const handleSaveSettings = async () => {
-    if (!selectedAvd) return;
+  const handleSaveSettings = async (): Promise<boolean> => {
+    if (!selectedAvd) return false;
     try {
       await updateAvdConfig(selectedAvd.name, settingsValues);
       success(`Settings saved for '${selectedAvd.name}'`);
       setShowSettingsDialog(false);
       setSelectedAvd(null);
+      return true;
     } catch (e) {
       error(`Failed to save settings: ${e}`);
+      return false;
     }
   };
 
-  const handleLaunchEmulator = async (avdName: string) => {
+  const handleLaunchEmulator = async (
+    avdName: string,
+    coldBoot: boolean = false
+  ): Promise<void> => {
     if (!env?.sdk_path) return;
     const isRunning = runningEmulators.some(
       (e) => e.name === avdName
@@ -545,15 +563,23 @@ function App() {
       return;
     }
     try {
+      const optionsToUse: LaunchOptions = {
+        ...launchOptions,
+        cold_boot: coldBoot || launchOptions.cold_boot,
+      };
       setEmulatorLogs((prev) => ({ ...prev, [avdName]: [] })); // Clear previous logs
       setActiveTerminalTab(avdName); // Auto-focus global terminal tab
-      await launchEmulator(env.sdk_path, avdName, launchOptions, (line) => {
+      await launchEmulator(env.sdk_path, avdName, optionsToUse, (line: string) => {
         setEmulatorLogs((prev) => ({
           ...prev,
           [avdName]: [...(prev[avdName] || []), line].slice(-1000), // Keep last 1000 lines
         }));
       });
-      success(`Emulator '${avdName}' launched`);
+      success(
+        optionsToUse.cold_boot
+          ? `Emulator '${avdName}' launched (Cold Boot)`
+          : `Emulator '${avdName}' launched`
+      );
       setTimeout(loadRunningEmulators, 3000);
     } catch (e) {
       error(`Failed to launch emulator: ${e}`);
@@ -898,6 +924,7 @@ function App() {
                         (e) => e.name === avd.name
                       )}
                       onLaunch={() => handleLaunchEmulator(avd.name)}
+                      onColdBoot={() => handleLaunchEmulator(avd.name, true)}
                       onDelete={() => handleDeleteAvd(avd.name)}
                       onRename={() => {
                         setSelectedAvd(avd);
@@ -1631,6 +1658,21 @@ function App() {
             >
               Cancel
             </button>
+            {selectedAvd && !runningEmulators.some((e) => e.name === selectedAvd.name) && (
+              <button
+                className="btn btn-secondary"
+                onClick={async () => {
+                  const avdName = selectedAvd.name;
+                  const saved = await handleSaveSettings();
+                  if (saved) {
+                    handleLaunchEmulator(avdName, true);
+                  }
+                }}
+                title="Save settings and immediately start emulator with Cold Boot"
+              >
+                <Snowflake size={14} /> Save & Cold Boot
+              </button>
+            )}
             <button
               className="btn btn-primary"
               onClick={handleSaveSettings}

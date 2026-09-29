@@ -414,6 +414,10 @@
   border-top: 1px solid var(--color-border);
 }
 
+.avd-card-footer .btn {
+  justify-content: center;
+}
+
 /* ==========================================
    Status Badges
    ========================================== */
